@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  redis-master:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  redis-slave:
+    image: redis:7-alpine
+    command: redis-server --slaveof redis-master 6379
+    depends_on:
+      - redis-master
+    ports:
+      - "6380:6379"
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    environment:
+      - REDIS_HOSTS=master:redis-master:6379,slave:redis-slave:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis-master
+      - redis-slave
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ecommerce
+      POSTGRES_USER: app_user
+      POSTGRES_PASSWORD: app_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  redis_data:
+  postgres_data:
+

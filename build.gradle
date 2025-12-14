@@ -1,0 +1,122 @@
+plugins {
+	id 'java'
+	id 'com.diffplug.spotless' version '6.23.3'
+	id 'io.spring.dependency-management' version '1.1.6'
+	id 'jacoco'
+}
+
+group = 'ru.mentee.power'
+version = '1.0.0'
+
+repositories {
+	mavenCentral()
+}
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+ext {
+	versions = [
+		spotless          : '6.23.3',
+		postgresql        : '42.6.0',
+		lombok           : '1.18.30',
+		slf4j            : '2.0.9',
+		logback          : '1.4.11',
+		junit            : '5.10.0',
+		assertj          : '3.24.2',
+		jedis            : '5.1.0',
+		caffeine         : '3.1.8',
+		jackson          : '2.16.1',
+		kryo             : '5.5.0',
+		testcontainers   : '1.20.4',
+		googleJavaFormat : '1.17.0'
+	]
+}
+
+dependencies {
+	// Основные зависимости
+	implementation 'org.postgresql:postgresql:42.6.0'
+	implementation 'org.slf4j:slf4j-api:2.0.9'
+	implementation 'ch.qos.logback:logback-classic:1.4.11'
+
+	// Redis
+	implementation "redis.clients:jedis:${versions.jedis}"
+
+	// In-memory cache (L1)
+	implementation "com.github.ben-manes.caffeine:caffeine:${versions.caffeine}"
+
+	// Сериализация
+	implementation "com.fasterxml.jackson.core:jackson-databind:${versions.jackson}"
+	implementation "com.fasterxml.jackson.core:jackson-core:${versions.jackson}"
+	implementation "com.fasterxml.jackson.core:jackson-annotations:${versions.jackson}"
+	implementation "com.esotericsoftware:kryo:${versions.kryo}"
+
+	// Тестирование
+	testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	testImplementation 'org.assertj:assertj-core:3.24.2'
+
+	// TestContainers
+	testImplementation "org.testcontainers:testcontainers:${versions.testcontainers}"
+	testImplementation "org.testcontainers:junit-jupiter:${versions.testcontainers}"
+
+	// Lombok
+	compileOnly 'org.projectlombok:lombok:1.18.30'
+	annotationProcessor 'org.projectlombok:lombok:1.18.30'
+	testCompileOnly 'org.projectlombok:lombok:1.18.30'
+	testAnnotationProcessor 'org.projectlombok:lombok:1.18.30'
+}
+
+dependencyManagement {
+	imports {
+		mavenBom "org.testcontainers:testcontainers-bom:${versions.testcontainers}"
+	}
+}
+
+spotless {
+	format 'misc', {
+		target '*.gradle', '.gitattributes', '.gitignore'
+		trimTrailingWhitespace()
+		indentWithTabs()
+		endWithNewline()
+	}
+	java {
+		targetExclude('**/build/**', '**/build-generated/**')
+		googleJavaFormat("${versions.googleJavaFormat}").aosp().reflowLongStrings().skipJavadocFormatting()
+		formatAnnotations()
+	}
+}
+
+compileJava {
+	options.encoding = 'UTF-8'
+}
+
+compileTestJava {
+	options.encoding = 'UTF-8'
+}
+
+tasks.withType(JavaCompile) {
+	options.encoding = 'UTF-8'
+}
+
+test {
+	useJUnitPlatform()
+	finalizedBy jacocoTestReport
+}
+
+jacoco {
+	toolVersion = '0.8.11'
+}
+
+jacocoTestReport {
+	dependsOn test
+	reports {
+		xml.required = true
+		xml.outputLocation = layout.buildDirectory.file('reports/jacoco/test/jacoco.xml')
+		csv.required = false
+		html.outputLocation = layout.buildDirectory.dir('reports/jacoco/test/html')
+	}
+}
